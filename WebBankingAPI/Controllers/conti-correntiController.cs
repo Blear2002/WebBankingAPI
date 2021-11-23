@@ -70,7 +70,6 @@ namespace WebBankingAPI.Controllers
 
         #endregion
 
-
         #region 4.conti-correnti/ID Metodo autorizzato per banchieri e correntisti
         [Authorize]
         [HttpGet("/conti-correnti/{id}")]
@@ -115,7 +114,6 @@ namespace WebBankingAPI.Controllers
             }
         }
         #endregion
-
 
         #region 5.conti-correnti/ID/Movimenti ordinati per data -- Metodo autorizzato per banchieri e correntisti
         [Authorize]
@@ -168,7 +166,6 @@ namespace WebBankingAPI.Controllers
             }
         }
         #endregion
-
 
         #region 6.conti-correnti/ID/Movimenti/id_movimento  -- Metodo autorizzato per banchieri e correntisti
         [Authorize]
@@ -378,7 +375,6 @@ namespace WebBankingAPI.Controllers
         }
         #endregion
 
-
         #region 8./conti-correnti  Banchieri  Crea un nuovo conto corrente
         [Authorize]
         [HttpPost("/conti-correnti")]
@@ -424,7 +420,6 @@ namespace WebBankingAPI.Controllers
         }
         #endregion
 
-
         #region 9. PUT  /conti-correnti/{id}  Banchieri  Aggiorna un conto corrente       
         [Authorize]
         [HttpPut("/conti-correnti/{id}")]
@@ -464,7 +459,7 @@ namespace WebBankingAPI.Controllers
         }
         #endregion
 
-        #region 10  DELETE  /conti-correnti/{id}  Banchieri  Cancella un conto corrente (e tutti i movimenti associati) 
+        #region 10. DELETE  /conti-correnti/{id}  Banchieri  Cancella un conto corrente (e tutti i movimenti associati) 
         [HttpDelete("/conti-correnti/{id}")]
         public ActionResult EliminaConto(int id)
         {
@@ -501,9 +496,59 @@ namespace WebBankingAPI.Controllers
                 }
 
             }
+        }
             #endregion
 
-        }
+        #region 11. /conti-correnti/id/saldo
+            [Authorize]
+            [HttpGet("/conti-correnti/{id}/saldo")]
+            public ActionResult CalcolaSaldo(int id)
+            {
+                if (id <= 0) return Problem("Id non valido");
+                #region verificaUtente e prendo da database l'intero user
+                //prendo attraverso lo user e i claims i valori 
+                var ID_utente = HttpContext.User.Claims.FirstOrDefault(x => x.Type == "Id").Value;
+                var Name_Utente = HttpContext.User.Claims.FirstOrDefault(x => x.Type == "Username").Value;
+
+                //prendo l'intero user con model
+                using (WebBankingContext model = new WebBankingContext())
+                {
+                    //Ricontrollo l'untente -- lo prendo e lo modifico per il last logout, mi basta solo id e username perchè
+                    //tanto è un metodo in cui serve il token di autorizzazione
+                    User candidate = model.Users.FirstOrDefault(q => q.Id.ToString() == ID_utente && q.Username == Name_Utente);
+                #endregion
+
+                if (candidate.IsBanker)
+                {
+                    BankAccount ba = model.BankAccounts.Include(o=> o.AccountMovements).Where(o => o.Id == id).FirstOrDefault();
+
+                    var importoIn = ba.AccountMovements.Sum(o => o.In);
+                    var importoOut = ba.AccountMovements.Sum(o => o.Out);
+
+                    var calcoloSaldo = importoIn - importoOut;
+                    var result = new { Iban = ba.Iban, Saldo = calcoloSaldo};
+                    
+                    return Ok(result);
+                       
+                    }            
+                    else if (!candidate.IsBanker)
+                    {
+                    BankAccount ba = model.BankAccounts.Include(o => o.AccountMovements).Where(o => o.Id == id && o.FkUser == candidate.Id).FirstOrDefault();
+                    if (ba == null) return NotFound("Non cè un movimento bancario con id cercato");
+
+                    var importoIn = ba.AccountMovements.Sum(o => o.In);
+                    var importoOut = ba.AccountMovements.Sum(o => o.Out);
+
+                    var calcoloSaldo = importoIn - importoOut;
+                    var result = new { Iban = ba.Iban, Saldo = calcoloSaldo };
+
+                    return Ok(result);
+                    }
+                    else
+                        return Problem("Problema nel visualizzare il saldo");
+                    }                  
+            }
+        #endregion
     }
 }
 
