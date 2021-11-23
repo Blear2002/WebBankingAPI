@@ -260,7 +260,7 @@ namespace WebBankingAPI.Controllers
                     {
                         if (ibanDestinatario == contoMittente.Iban) //se l'iban è lo stesso del contoMittente allora eseguo un model.add su id del mittente 
                         {
-                            model.AccountMovements.Add(new AccountMovement { Date = DateTime.Now, In = bonifico.Importo, Out = null, Description = bonifico.Descrizione, FkBankAccount = Convert.ToInt32(ibanDestinatario) });
+                            model.AccountMovements.Add(new AccountMovement { Date = DateTime.Now, In = bonifico.Importo, Out = null, Description = bonifico.Descrizione, FkBankAccount = contoMittente.Id });
                             model.SaveChanges();
                             return Ok(bonifico);
                         }
@@ -446,8 +446,8 @@ namespace WebBankingAPI.Controllers
 
                 if (candidate.IsBanker)
                 {
-                    var contoCandidate = model.BankAccounts.Where(o => o.Id == id).FirstOrDefault();
-                    if (contoCandidate == null) return NotFound("Non è stato trovato il conto bancario");
+                    var contoCandidate = model.BankAccounts.Where(o => o.Id == bankAccountAggiornato.Id).FirstOrDefault();
+                    if (contoCandidate == null) return NotFound("Non puoi rinominare il bank account con un nome gia esistente");
 
                     contoCandidate.Iban = bankAccountAggiornato.Iban;
                     contoCandidate.FkUser = bankAccountAggiornato.FkUser;
@@ -486,6 +486,10 @@ namespace WebBankingAPI.Controllers
                 {
                     var candidateDelete = model.BankAccounts.Where(a => a.Id == id).FirstOrDefault();
                     if (candidateDelete == null) return NotFound("Conto bancario non trovato");
+
+                    var listaMovements = model.AccountMovements.Where(o => o.FkBankAccount == candidateDelete.Id).ToList();
+
+                    model.AccountMovements.RemoveRange(listaMovements);
 
                     model.BankAccounts.Remove(candidateDelete);
                     model.SaveChanges();
