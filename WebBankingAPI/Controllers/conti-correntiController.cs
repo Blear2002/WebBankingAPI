@@ -425,7 +425,6 @@ namespace WebBankingAPI.Controllers
         #endregion
 
 
-
         #region 9. PUT  /conti-correnti/{id}  Banchieri  Aggiorna un conto corrente       
         [Authorize]
         [HttpPut("/conti-correnti/{id}")]
