@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using WebBankingAPI.Models;
-using System.Linq;
 using Microsoft.EntityFrameworkCore;
 
 namespace WebBankingAPI.Controllers
