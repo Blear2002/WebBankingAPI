@@ -254,10 +254,8 @@ namespace WebBankingAPI.Controllers
                         return NotFound("Conto corrente mittente non trovato");
                     else
                     {
-                        //check saldo con importo bonifico
-                        double checkSaldoAttuale = OttieniSaldoMittente(contoMittente);
-                        if (checkSaldoAttuale < bonifico.Importo) return Problem("Non hai abbasanza soldi per completare il bonifico!");
-
+                        //qua non faccio controlli sul saldo perchè  l'utente deposita soldi per se stesso come per esempio soldi che ha ottentuto 
+                        //e poi va a depositare nel suo conto
                         if (ibanDestinatario == contoMittente.Iban) //se l'iban è lo stesso del contoMittente allora eseguo un model.add su id del mittente 
                         {
                             model.AccountMovements.Add(new AccountMovement { Date = DateTime.Now, In = bonifico.Importo, Out = null, Description = bonifico.Descrizione, FkBankAccount = contoMittente.Id });
@@ -266,6 +264,10 @@ namespace WebBankingAPI.Controllers
                         }
                         else //se l'iban non è uguale al conto mittente cerco nel db altri conti cioè il destinatario
                         {
+                            //check saldo con importo bonifico
+                            double checkSaldoAttuale = OttieniSaldoMittente(contoMittente);
+                            if (checkSaldoAttuale < bonifico.Importo) return Problem("Non hai abbasanza soldi per completare il bonifico!");
+
                             var contoDestinatario = model.BankAccounts.Where(o => o.Iban == ibanDestinatario).FirstOrDefault();
 
                             if (contoDestinatario != null) //se trovo il conto destinatario
@@ -319,18 +321,21 @@ namespace WebBankingAPI.Controllers
                         return NotFound("Conto corrente mittente non trovato");
                     else
                     {
-                        //check saldo con importo bonifico
-                        double checkSaldoAttuale = OttieniSaldoMittente(contoMittenteUser);
-                        if (checkSaldoAttuale < bonifico.Importo) return Problem("Non hai abbasanza soldi per completare il bonifico!");
-
+                        
+                        //qua non faccio controlli sul saldo perchè  l'utente deposita soldi per se stesso come per esempio soldi che ha ottentuto 
+                        //e poi va a depositare nel suo conto
                         if (ibanDestinatario == contoMittenteUser.Iban) //se l'iban è lo stesso del contoMittente allora eseguo un model.add su id del mittente 
                         {
-                            model.AccountMovements.Add(new AccountMovement { Date = DateTime.Now, In = bonifico.Importo, Out = null, Description = bonifico.Descrizione, FkBankAccount = Convert.ToInt32(ibanDestinatario) });
+                            model.AccountMovements.Add(new AccountMovement { Date = DateTime.Now, In = bonifico.Importo, Out = null, Description = bonifico.Descrizione, FkBankAccount = contoMittenteUser.Id });
                             model.SaveChanges();
                             return Ok(bonifico);
                         }
                         else //se l'iban non è uguale al conto mittente cerco nel db altri conti cioè il destinatario
                         {
+                            //check saldo con importo bonifico
+                            double checkSaldoAttuale = OttieniSaldoMittente(contoMittenteUser);
+                            if (checkSaldoAttuale < bonifico.Importo) return Problem("Non hai abbasanza soldi per completare il bonifico!");
+
                             var contoDestinatario = model.BankAccounts.Where(o => o.Iban == ibanDestinatario).FirstOrDefault();
 
                             if (contoDestinatario != null) //se trovo il conto destinatario
@@ -556,7 +561,6 @@ namespace WebBankingAPI.Controllers
                     }                  
             }
         #endregion
-
 
         public double OttieniSaldoMittente(BankAccount userAccount)
         {
