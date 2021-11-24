@@ -246,7 +246,7 @@ namespace WebBankingAPI.Controllers
 
                 if (candidate.IsBanker)
                 {
-                    var contoMittente = model.BankAccounts.Where(O => O.Id == id).FirstOrDefault();
+                    var contoMittente = model.BankAccounts.Include(o => o.AccountMovements).Where(O => O.Id == id).FirstOrDefault();
                     var ibanDestinatario = bonifico.Iban;
 
                     //controllo se esistono
@@ -254,6 +254,10 @@ namespace WebBankingAPI.Controllers
                         return NotFound("Conto corrente mittente non trovato");
                     else
                     {
+                        //check saldo con importo bonifico
+                        double checkSaldoAttuale = OttieniSaldoMittente(contoMittente);
+                        if (checkSaldoAttuale < bonifico.Importo) return Problem("Non hai abbasanza soldi per completare il bonifico!");
+
                         if (ibanDestinatario == contoMittente.Iban) //se l'iban è lo stesso del contoMittente allora eseguo un model.add su id del mittente 
                         {
                             model.AccountMovements.Add(new AccountMovement { Date = DateTime.Now, In = bonifico.Importo, Out = null, Description = bonifico.Descrizione, FkBankAccount = contoMittente.Id });
@@ -307,7 +311,7 @@ namespace WebBankingAPI.Controllers
                 }
                 else if (!candidate.IsBanker)
                 {
-                    var contoMittenteUser = model.BankAccounts.Where(O => O.Id == id && O.FkUser == candidate.Id).FirstOrDefault();
+                    var contoMittenteUser = model.BankAccounts.Include(o=>o.AccountMovements).Where(O => O.Id == id && O.FkUser == candidate.Id).FirstOrDefault();
                     var ibanDestinatario = bonifico.Iban;
 
                     //controllo se esistono
@@ -315,6 +319,10 @@ namespace WebBankingAPI.Controllers
                         return NotFound("Conto corrente mittente non trovato");
                     else
                     {
+                        //check saldo con importo bonifico
+                        double checkSaldoAttuale = OttieniSaldoMittente(contoMittenteUser);
+                        if (checkSaldoAttuale < bonifico.Importo) return Problem("Non hai abbasanza soldi per completare il bonifico!");
+
                         if (ibanDestinatario == contoMittenteUser.Iban) //se l'iban è lo stesso del contoMittente allora eseguo un model.add su id del mittente 
                         {
                             model.AccountMovements.Add(new AccountMovement { Date = DateTime.Now, In = bonifico.Importo, Out = null, Description = bonifico.Descrizione, FkBankAccount = Convert.ToInt32(ibanDestinatario) });
@@ -549,5 +557,19 @@ namespace WebBankingAPI.Controllers
             }
         #endregion
 
+
+        public double OttieniSaldoMittente(BankAccount userAccount)
+        {
+            double saldoAttuale = 0;
+
+            using(WebBankingContext model = new WebBankingContext())
+            {
+                double saldoIn = userAccount.AccountMovements.Sum(i => i.In).Value;
+                double saldoOut = userAccount.AccountMovements.Sum(o => o.Out).Value;
+                saldoAttuale = saldoIn + saldoOut;
+            }
+
+            return saldoAttuale;
+        }
     }
 }
