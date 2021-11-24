@@ -438,6 +438,8 @@ namespace WebBankingAPI.Controllers
         public ActionResult ModificaContoCorrente(int id, [FromBody] BankAccount bankAccountAggiornato)
         {
             if (id <= 0) return Problem("Id non valido");
+            if (bankAccountAggiornato.Iban == null) return Problem("Iban non inserito");
+            if (bankAccountAggiornato.FkUser == null) return Problem("id user non valido");
             #region verificaUtente e prendo da database l'intero user
             //prendo attraverso lo user e i claims i valori 
             var ID_utente = HttpContext.User.Claims.FirstOrDefault(x => x.Type == "Id").Value;
@@ -453,11 +455,18 @@ namespace WebBankingAPI.Controllers
 
                 if (candidate.IsBanker)
                 {
-                    var contoCandidate = model.BankAccounts.Where(o => o.Id == bankAccountAggiornato.Id).FirstOrDefault();
-                    if (contoCandidate == null) return NotFound("Non puoi rinominare il bank account con un nome gia esistente");
+                    var contoCandidate = model.BankAccounts.Where(o => o.Id == id).FirstOrDefault();
+                    if (contoCandidate == null) return NotFound("Id contobancario da modificare non trovato");
+
+                    var checkNomeEsistente = model.BankAccounts.Where(o => o.Iban.Equals(bankAccountAggiornato.Iban)).FirstOrDefault();
+
+                    if (checkNomeEsistente != null) return Problem("Iban già esistente");
+
+                    var checkIdUser = model.Users.Where(o => o.Id == bankAccountAggiornato.FkUser).FirstOrDefault();
+                    if (checkIdUser == null) return Problem("Id user non esistente");
 
                     contoCandidate.Iban = bankAccountAggiornato.Iban;
-                    contoCandidate.FkUser = bankAccountAggiornato.FkUser;
+                    contoCandidate.FkUser = bankAccountAggiornato.FkUser;                    
 
                     model.SaveChanges();
                     return Ok(contoCandidate);
@@ -466,8 +475,7 @@ namespace WebBankingAPI.Controllers
                 {
                     return Unauthorized("Non sei autorizzato ad entrare in questa pagina");
                 }
-
-            }
+            }                
         }
         #endregion
 
@@ -533,11 +541,9 @@ namespace WebBankingAPI.Controllers
                 if (candidate.IsBanker)
                 {
                     BankAccount ba = model.BankAccounts.Include(o=> o.AccountMovements).Where(o => o.Id == id).FirstOrDefault();
+                    if (ba == null) return NotFound("Conto bancario non trovato");
 
-                    var importoIn = ba.AccountMovements.Sum(o => o.In);
-                    var importoOut = ba.AccountMovements.Sum(o => o.Out);
-
-                    var calcoloSaldo = importoIn - importoOut;
+                    var calcoloSaldo = OttieniSaldoMittente(ba);
                     var result = new { Iban = ba.Iban, Saldo = calcoloSaldo};
                     
                     return Ok(result);
@@ -546,7 +552,7 @@ namespace WebBankingAPI.Controllers
                     else if (!candidate.IsBanker)
                     {
                     BankAccount ba = model.BankAccounts.Include(o => o.AccountMovements).Where(o => o.Id == id && o.FkUser == candidate.Id).FirstOrDefault();
-                    if (ba == null) return NotFound("Non cè un movimento bancario con id cercato");
+                    if (ba == null) return NotFound("Non cè un conto bancario con id cercato");
 
                     var importoIn = ba.AccountMovements.Sum(o => o.In);
                     var importoOut = ba.AccountMovements.Sum(o => o.Out);
