@@ -415,6 +415,9 @@ namespace WebBankingAPI.Controllers
                     var checkContoEsistente = model.BankAccounts.Where(o => o.Iban == bankAccount.Iban).FirstOrDefault();
                     if (checkContoEsistente == null)
                     {
+                        var checkIdUser = model.Users.Where(o => o.Id == bankAccount.FkUser).FirstOrDefault();
+                        if (checkIdUser == null) return Problem("Id user non esistente");
+
                         model.BankAccounts.Add(new BankAccount
                         {
                             Iban = bankAccount.Iban,
