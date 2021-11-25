@@ -461,7 +461,7 @@ namespace WebBankingAPI.Controllers
                     var contoCandidate = model.BankAccounts.Where(o => o.Id == id).FirstOrDefault();
                     if (contoCandidate == null) return NotFound("Id contobancario da modificare non trovato");
 
-                    var checkNomeEsistente = model.BankAccounts.Where(o => o.Iban.Equals(bankAccountAggiornato.Iban)).FirstOrDefault();
+                    var checkNomeEsistente = model.BankAccounts.Where(o => o.Iban == bankAccountAggiornato.Iban).FirstOrDefault();
 
                     if (checkNomeEsistente != null) return Problem("Iban già esistente");
 
@@ -469,7 +469,7 @@ namespace WebBankingAPI.Controllers
                     if (checkIdUser == null) return Problem("Id user non esistente");
 
                     contoCandidate.Iban = bankAccountAggiornato.Iban;
-                    contoCandidate.FkUser = bankAccountAggiornato.FkUser;                    
+                    contoCandidate.FkUser = bankAccountAggiornato.FkUser;
 
                     model.SaveChanges();
                     return Ok(contoCandidate);
