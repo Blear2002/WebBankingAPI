@@ -17,7 +17,7 @@ namespace WebBankingAPI.Models
         public string Iban { get; set; }
         public int? FkUser { get; set; }
         
-        [JsonIgnore]
+        [JsonIgnore] //ho dovuto inserire questa proprietà perchè si generava un ciclo quando modificavo l'oggetto
         public virtual User FkUserNavigation { get; set; }
         [JsonIgnore]
         public virtual ICollection<AccountMovement> AccountMovements { get; set; }
